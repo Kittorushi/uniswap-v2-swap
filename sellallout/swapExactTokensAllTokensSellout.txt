@@ -1,0 +1,154 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.17;
+
+contract UniswapV2SwapExamples {
+    // Address of the Uniswap V2 Router contract
+    address private constant UNISWAP_V2_ROUTER =
+        0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+
+    // Address of the Wrapped Ether (WETH) token
+    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+
+    // Address of the Dai (DAI) token
+    address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+
+    // Address of the USD Coin (USDC) token
+    address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+
+    // Interface instances for interacting with ERC20 tokens
+    IUniswapV2Router private router = IUniswapV2Router(UNISWAP_V2_ROUTER);
+    IERC20 private weth = IERC20(WETH);
+    IERC20 private dai = IERC20(DAI);
+
+    // Swap WETH to DAI using a single hop
+    function swapSingleHopExactAmountIn(
+        uint amountIn,
+        uint amountOutMin
+    ) external returns (uint amountOut) {
+        // Transfer WETH tokens from the sender to this contract
+        weth.transferFrom(msg.sender, address(this), amountIn);
+
+        // Approve the Uniswap V2 Router to spend the transferred WETH tokens
+        weth.approve(address(router), amountIn);
+
+        // Set up the token swap path
+        address[] memory path;
+        path = new address[](2);
+        path[0] = WETH;
+        path[1] = DAI;
+
+        // Perform the token swap
+        uint[] memory amounts = router.swapExactTokensForTokens(
+            amountIn,
+            amountOutMin,
+            path,
+            msg.sender,
+            block.timestamp
+        );
+
+        // Return the amount of DAI received from the swap
+        return amounts[1];
+    }
+
+    // Swap DAI to WETH and then WETH to USDC using multiple hops
+    function swapMultiHopExactAmountIn(
+        uint amountIn,
+        uint amountOutMin
+    ) external returns (uint amountOut) {
+        // Transfer DAI tokens from the sender to this contract
+        dai.transferFrom(msg.sender, address(this), amountIn);
+
+        // Approve the Uniswap V2 Router to spend the transferred DAI tokens
+        dai.approve(address(router), amountIn);
+
+        // Set up the token swap path
+        address[] memory path;
+        path = new address[](3);
+        path[0] = DAI;
+        path[1] = WETH;
+        path[2] = USDC;
+
+        // Perform the token swap
+        uint[] memory amounts = router.swapExactTokensForTokens(
+            amountIn,
+            amountOutMin,
+            path,
+            msg.sender,
+            block.timestamp
+        );
+
+        // Return the amount of USDC received from the swap
+        return amounts[2];
+    }
+
+    // Swap WETH to DAI, targeting a specific amount of DAI to receive
+    function swapSingleHopExactAmountOut(
+        uint amountOutDesired,
+        uint amountInMax
+    ) external returns (uint amountOut) {
+        // Transfer WETH tokens from the sender to this contract
+        weth.transferFrom(msg.sender, address(this), amountInMax);
+
+        // Approve the Uniswap V2 Router to spend the transferred WETH tokens
+        weth.approve(address(router), amountInMax);
+
+        // Set up the token swap path
+        address[] memory path;
+        path = new address[](2);
+        path[0] = WETH;
+        path[1] = DAI;
+
+        // Perform the token swap
+        uint[] memory amounts = router.swapTokensForExactTokens(
+            amountOutDesired,
+            amountInMax,
+            path,
+            msg.sender,
+            block.timestamp
+        );
+
+        // Refund any unused WETH back to the sender
+        if (amounts[0] < amountInMax) {
+            weth.transfer(msg.sender, amountInMax - amounts[0]);
+        }
+
+        // Return the amount of DAI received from the swap
+        return amounts[1];
+    }
+
+    // Swap DAI to WETH and then WETH to USDC, targeting a specific amount of USDC to receive
+    function swapMultiHopExactAmountOut(
+        uint amountOutDesired,
+        uint amountInMax
+    ) external returns (uint amountOut) {
+        // Transfer DAI tokens from the sender to this contract
+        dai.transferFrom(msg.sender, address(this), amountInMax);
+
+        // Approve the Uniswap V2 Router to spend the transferred DAI tokens
+        dai.approve(address(router), amountInMax);
+
+        // Set up the token swap path
+        address[] memory path;
+        path = new address[](3);
+        path[0] = DAI;
+        path[1] = WETH;
+        path[2] = USDC;
+
+        // Perform the token swap
+        uint[] memory amounts = router.swapTokensForExactTokens(
+            amountOutDesired,
+            amountInMax,
+            path,
+            msg.sender,
+            block.timestamp
+        );
+
+        // Refund any unused DAI back to the sender
+        if (amounts[0] < amountInMax) {
+            dai.transfer(msg.sender, amountInMax - amounts[0]);
+        }
+
+        // Return the amount of USDC received from the swap
+        return amounts[2];
+    }
+}
